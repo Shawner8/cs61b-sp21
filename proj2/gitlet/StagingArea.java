@@ -39,9 +39,9 @@ public class StagingArea {
             if (additionMap.containsKey(blob.getFileName())) {
                 remove(blob.getFileName());
             }
-            additionMap.put(blob.getFileName(), blob.uid());
+            additionMap.put(blob.getFileName(), blob.getUid());
             writeObject(ADDITIONMAP, additionMap);
-            File blobFile = join(ADDITION_FOLDER, blob.uid());
+            File blobFile = join(ADDITION_FOLDER, blob.getUid());
             writeObject(blobFile, blob);
         }
 

@@ -31,6 +31,10 @@ public class Branch implements Serializable {
         writeContents(BRANCH, name);
     }
 
+    /** Return the name of the current branch. */
+    static String get() {
+        return readContentsAsString(BRANCH);
+    }
 
     /** Update the reference of the current branch. */
     static void update(String ref) {

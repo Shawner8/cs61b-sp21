@@ -5,6 +5,7 @@ package gitlet;
 import java.io.File;
 import java.io.Serializable;
 import java.util.Date; // TODO: You'll likely use this in this class
+import java.util.Locale;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -48,7 +49,7 @@ public class Commit implements Serializable {
     public Commit(Commit o, String commitMessage) {
         message = commitMessage;
         timestamp = new Date();
-        parent = o.uid();
+        parent = o.getUid();
         files = o.files;
 
         TreeMap<String, String> additionMap = StagingArea.AdditionArea.getMap();
@@ -62,12 +63,21 @@ public class Commit implements Serializable {
         }
     }
 
-    /** Return SHA1 of the commit. */
-    String uid() {
-        if (uid == null) {
-            uid = sha1(toString());
+    String getMessage() {
+        return message;
+    }
+
+    Date getTimestamp() {
+        return timestamp;
+    }
+
+    Commit getParentCommit() {
+        if (parent == null) {
+            return null;
+        } else {
+            File parentCommit = join(COMMIT_FOLDER, parent);
+            return readObject(parentCommit, Commit.class);
         }
-        return uid;
     }
 
     boolean containsFile(String fileName) {
@@ -78,8 +88,16 @@ public class Commit implements Serializable {
         return files.get(fileName);
     }
 
+    /** Return SHA1 of the commit. */
+    String getUid() {
+        if (uid == null) {
+            uid = sha1(toString());
+        }
+        return uid;
+    }
+
     void save() {
-        File commit = join(COMMIT_FOLDER, uid());
+        File commit = join(COMMIT_FOLDER, getUid());
         writeObject(commit, this);
     }
 
@@ -91,5 +109,10 @@ public class Commit implements Serializable {
             s += String.format("|--%s -> %s\n", fileName, files.get(fileName));
         }
         return s;
+    }
+
+    String logInfo() {
+        String t = String.format(Locale.US, "%1$ta %1$tb %1$te %1$tT %1$tY %1$tz", timestamp);
+        return String.format("===\ncommit %s\nDate: %s\n%s\n\n", uid, t, message);
     }
 }

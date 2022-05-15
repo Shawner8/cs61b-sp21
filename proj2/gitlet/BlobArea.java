@@ -13,7 +13,7 @@ public class BlobArea {
     }
 
     static void save(Blob blob) {
-        File blobFile = join(BLOB_FOLDER, blob.uid());
+        File blobFile = join(BLOB_FOLDER, blob.getUid());
         writeObject(blobFile, blob);
     }
 }

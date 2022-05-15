@@ -20,7 +20,7 @@ public class Blob implements Serializable {
         return fileName;
     }
 
-    String uid() {
+    String getUid() {
         if (uid == null) {
             uid = sha1(toString());
         }

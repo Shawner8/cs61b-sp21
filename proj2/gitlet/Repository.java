@@ -1,6 +1,9 @@
 package gitlet;
 
 import java.io.File;
+import java.util.List;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 import static gitlet.Utils.*;
 
@@ -44,7 +47,7 @@ public class Repository {
             Branch.BRANCH_FOLDER.mkdir();
 
             Commit initCommit = new Commit();
-            String uid = initCommit.uid();
+            String uid = initCommit.getUid();
             initCommit.save();
             Head.set(uid);
             Branch branch = new Branch(uid, "master");
@@ -62,7 +65,7 @@ public class Repository {
             Blob blob = new Blob(file);
             Commit commit = Head.load();
             if (commit.containsFile(blob.getFileName()) &&
-                    commit.getFileReference(blob.getFileName()).equals(blob.uid())) {
+                    commit.getFileReference(blob.getFileName()).equals(blob.getUid())) {
                 StagingArea.AdditionArea.remove(blob.getFileName());
             } else {
                 StagingArea.AdditionArea.add(blob);
@@ -96,8 +99,75 @@ public class Repository {
             commit.save();
             StagingArea.AdditionArea.moveToBlobs();
             StagingArea.init();
-            Head.set(commit.uid());
-            Branch.update(commit.uid());
+            Head.set(commit.getUid());
+            Branch.update(commit.getUid());
         }
+    }
+
+    static void log() {
+        Commit commit = Head.load();
+        while (commit != null) {
+            System.out.print(commit.logInfo());
+            commit = commit.getParentCommit();
+        }
+    }
+
+    static void globalLog() {
+        List<String> commits = plainFilenamesIn(Commit.COMMIT_FOLDER);
+        for (String commitUID : commits) {
+            File commitFile = join(Commit.COMMIT_FOLDER, commitUID);
+            Commit commit = readObject(commitFile, Commit.class);
+            System.out.print(commit.logInfo());
+        }
+    }
+
+    static void find(String message) {
+        boolean exists = false;
+        List<String> commits = plainFilenamesIn(Commit.COMMIT_FOLDER);
+        for (String commitUID : commits) {
+            File commitFile = join(Commit.COMMIT_FOLDER, commitUID);
+            Commit commit = readObject(commitFile, Commit.class);
+            if (commit.getMessage().equals(message)) {
+                exists = true;
+                System.out.println(commitUID);
+            }
+        }
+        if (!exists) {
+            message("Found no commit with that message.");
+        }
+    }
+
+    static void status() {
+        System.out.println("=== Branches ===");
+        String currentBranch = Branch.get();
+        List<String> branches = plainFilenamesIn(Branch.BRANCH_FOLDER);
+        branches.sort(String::compareTo);
+        for (String branchName : branches) {
+            if (branchName.equals(currentBranch)) {
+                System.out.print("*");
+            }
+            System.out.println(branchName);
+        }
+        System.out.println();
+
+        System.out.println("=== Staged Files ===");
+        TreeMap<String, String> additionFiles = StagingArea.AdditionArea.getMap();
+        for (String fileName : additionFiles.navigableKeySet()) {
+            System.out.println(fileName);
+        }
+        System.out.println();
+
+        System.out.println("=== Removed Files ===");
+        TreeSet<String> removalFiles = StagingArea.RemovalArea.getSet();
+        for (String fileName : removalFiles) {
+            System.out.println(fileName);
+        }
+        System.out.println();
+
+        System.out.println("=== Modifications Not Staged For Commit ===");
+        System.out.println();
+
+        System.out.println("=== Untracked Files ===");
+        System.out.println();
     }
 }
