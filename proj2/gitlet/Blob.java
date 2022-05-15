@@ -14,14 +14,16 @@ public class Blob implements Serializable {
     public Blob(File fileObj) {
         fileName = fileObj.getName();
         fileContents = readContentsAsString(fileObj);
-        uid = sha1(toString());
     }
 
     String getFileName() {
         return fileName;
     }
 
-    String getUid() {
+    String uid() {
+        if (uid == null) {
+            uid = sha1(toString());
+        }
         return uid;
     }
 

@@ -7,7 +7,7 @@ import static gitlet.Utils.*;
 
 public class Head implements Serializable {
 
-    static final File HEAD = Utils.join(Repository.GITLET_DIR, "HEAD");
+    static final File HEAD = join(Repository.GITLET_DIR, "HEAD");
 
     static void set(String commitUID) {
         writeContents(HEAD, commitUID);

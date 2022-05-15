@@ -13,7 +13,7 @@ public class Main {
     public static void main(String[] args) {
         // TODO: what if args is empty?
         if (args.length == 0) {
-            Utils.message("Please enter a command.");
+            message("Please enter a command.");
             System.exit(0);
         }
 
@@ -28,11 +28,21 @@ public class Main {
                 // TODO: handle the `add [filename]` command
                 validateGitletDirectoryExists();
                 validateNumArgs(args, 2);
-                Repository.staging(args[1]);
+                Repository.stagedForAddition(args[1]);
                 break;
             // TODO: FILL THE REST IN
+            case "rm":
+                validateGitletDirectoryExists();
+                validateNumArgs(args, 2);
+                Repository.stagedForRemoval(args[1]);
+                break;
+            case "commit":
+                validateGitletDirectoryExists();
+                validateNumArgs(args, 2);
+                Repository.commit(args[1]);
+                break;
             default:
-                Utils.message("No command with that name exists.");
+                message("No command with that name exists.");
                 System.exit(0);
         }
     }

@@ -5,7 +5,8 @@ package gitlet;
 import java.io.File;
 import java.io.Serializable;
 import java.util.Date; // TODO: You'll likely use this in this class
-import java.util.HashMap;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 import static gitlet.Utils.*;
 
@@ -24,7 +25,7 @@ public class Commit implements Serializable {
      */
 
     /** Folder that commits live in. */
-    static final File COMMIT_FOLDER = Utils.join(Repository.GITLET_DIR, "commits");
+    static final File COMMIT_FOLDER = join(Repository.GITLET_DIR, "commits");
 
     /** The message of this Commit. */
     private String message;
@@ -32,23 +33,49 @@ public class Commit implements Serializable {
     /* TODO: fill in the rest of this class. */
     private Date timestamp;
     private String parent;
-    private HashMap<String, String> files;
+    private TreeMap<String, String> files;
     private String uid;
 
-    public Commit(String m, Date t, String p) {
-        message = m;
-        timestamp = t;
-        parent = p;
-        files = new HashMap<>();
+    /** Construct the initial commit. */
+    public Commit() {
+        message = "initial commit";
+        timestamp = new Date(0);
+        parent = null;
+        files = new TreeMap<>();
+    }
+
+    /** Construct a child commit of o. */
+    public Commit(Commit o, String commitMessage) {
+        message = commitMessage;
+        timestamp = new Date();
+        parent = o.uid();
+        files = o.files;
+
+        TreeMap<String, String> additionMap = StagingArea.AdditionArea.getMap();
+        for (String fileName : additionMap.keySet()) {
+            files.put(fileName, additionMap.get(fileName));
+        }
+
+        TreeSet<String> removalSet = StagingArea.RemovalArea.getSet();
+        for (String fileName : removalSet) {
+            files.remove(fileName);
+        }
     }
 
     /** Return SHA1 of the commit. */
     String uid() {
-        return sha1(toString());
+        if (uid == null) {
+            uid = sha1(toString());
+        }
+        return uid;
     }
 
-    HashMap<String, String> getFiles() {
-        return files;
+    boolean containsFile(String fileName) {
+        return files.containsKey(fileName);
+    }
+
+    String getFileReference(String fileName) {
+        return files.get(fileName);
     }
 
     void save() {

@@ -11,4 +11,9 @@ public class BlobArea {
     static void init() {
         BLOB_FOLDER.mkdirs();
     }
+
+    static void save(Blob blob) {
+        File blobFile = join(BLOB_FOLDER, blob.uid());
+        writeObject(blobFile, blob);
+    }
 }

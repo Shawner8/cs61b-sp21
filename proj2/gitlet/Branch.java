@@ -30,4 +30,12 @@ public class Branch implements Serializable {
     void set() {
         writeContents(BRANCH, name);
     }
+
+
+    /** Update the reference of the current branch. */
+    static void update(String ref) {
+        String name = readContentsAsString(BRANCH);
+        File currentBranch = join(BRANCH_FOLDER, name);
+        writeContents(currentBranch, ref);
+    }
 }
