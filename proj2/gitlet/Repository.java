@@ -1,6 +1,7 @@
 package gitlet;
 
 import java.io.File;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -52,7 +53,7 @@ public class Repository {
             Head.set(uid);
             Branch branch = new Branch(uid, "master");
             branch.save();
-            branch.set();
+            Branch.set(branch.getName());
         }
     }
 
@@ -98,7 +99,7 @@ public class Repository {
             Commit commit = new Commit(Head.load(), commitMessage);
             commit.save();
             StagingArea.AdditionArea.moveToBlobs();
-            StagingArea.init();
+            StagingArea.clear();
             Head.set(commit.getUid());
             Branch.update(commit.getUid());
         }
@@ -169,5 +170,59 @@ public class Repository {
 
         System.out.println("=== Untracked Files ===");
         System.out.println();
+    }
+
+    static void checkoutFileInCommit(String commitUID, String fileName) {
+        Commit commit = Commit.load(commitUID);
+        if (commit == null) {
+            message("No commit with that id exists.");
+            System.exit(0);
+        } else if (!commit.containsFile(fileName)) {
+            message("File does not exist in that commit.");
+            System.exit(0);
+        } else {
+            File file = join(CWD, fileName);
+            String fileContent = commit.getFileContent(fileName);
+            writeContents(file, fileContent);
+        }
+    }
+
+    static List<String> untrackedFiles() {
+        Commit commit = Head.load();
+        LinkedList<String> untrackedFiles = new LinkedList<>();
+        for (String fileName : plainFilenamesIn(CWD)) {
+            if (!commit.containsFile(fileName)) {
+                untrackedFiles.add(fileName);
+            }
+        }
+        return untrackedFiles;
+    }
+
+    static void clearCWD() {
+        for (String fileName : plainFilenamesIn(CWD)) {
+            File file = join(CWD, fileName);
+            restrictedDelete(file);
+        }
+    }
+
+    static void checkoutBranch(String branchName) {
+        if (!Branch.contains(branchName)) {
+            message("No such branch exists.");
+            System.exit(0);
+        } else if (Branch.get().equals(branchName)) {
+            message("No need to checkout the current branch.");
+            System.exit(0);
+        } else if (!untrackedFiles().isEmpty()) {
+            message("There is an untracked file in the way; delete it, or add and commit it first.");
+            System.exit(0);
+        } else {
+            Commit commit = Branch.load(branchName);
+            clearCWD();
+            for (String fileName : commit.getFiles().keySet()) {
+                checkoutFileInCommit(commit.getUid(), fileName);
+            }
+            StagingArea.clear();
+            Branch.set(branchName);
+        }
     }
 }

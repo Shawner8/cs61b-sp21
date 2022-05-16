@@ -105,6 +105,14 @@ public class StagingArea {
         RemovalArea.init();
     }
 
+    static void clear() {
+        for (String blobUID : plainFilenamesIn(AdditionArea.ADDITION_FOLDER)) {
+            File blobFile = join(AdditionArea.ADDITION_FOLDER, blobUID);
+            blobFile.delete();
+        }
+        init();
+    }
+
     static boolean isEmpty() {
         return AdditionArea.isEmpty() && RemovalArea.isEmpty();
     }

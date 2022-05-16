@@ -13,10 +13,14 @@ public class Head implements Serializable {
         writeContents(HEAD, commitUID);
     }
 
+    /** Get the uid of the current head commit. */
+    static String get() {
+        return readContentsAsString(HEAD);
+    }
+
     /** Load the current commit referenced by HEAD. */
     static Commit load() {
-        String commitUID = readContentsAsString(HEAD);
-        File commitFile = join(Commit.COMMIT_FOLDER, commitUID);
+        File commitFile = join(Commit.COMMIT_FOLDER, get());
         return readObject(commitFile, Commit.class);
     }
 }

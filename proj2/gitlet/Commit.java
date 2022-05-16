@@ -80,12 +80,22 @@ public class Commit implements Serializable {
         }
     }
 
+    TreeMap<String, String> getFiles() {
+        return files;
+    }
+
     boolean containsFile(String fileName) {
         return files.containsKey(fileName);
     }
 
     String getFileReference(String fileName) {
         return files.get(fileName);
+    }
+
+    String getFileContent(String fileName) {
+        String fileRef = getFileReference(fileName);
+        Blob blob = BlobArea.load(fileRef);
+        return blob.getFileContent();
     }
 
     /** Return SHA1 of the commit. */
@@ -96,9 +106,22 @@ public class Commit implements Serializable {
         return uid;
     }
 
+    /** Save the commit. */
     void save() {
         File commit = join(COMMIT_FOLDER, getUid());
         writeObject(commit, this);
+    }
+
+    /** Load the commit with given uid.
+     *  If the commit doesn't exist, return null.
+     */
+    static Commit load(String commitUID) {
+        File commitFile = join(COMMIT_FOLDER, commitUID);
+        if (!commitFile.exists()) {
+            return null;
+        } else {
+            return readObject(commitFile, Commit.class);
+        }
     }
 
     @Override

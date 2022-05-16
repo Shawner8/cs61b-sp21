@@ -8,16 +8,20 @@ import static gitlet.Utils.*;
 public class Blob implements Serializable {
 
     private String fileName;
-    private String fileContents;
+    private String fileContent;
     private String uid;
 
     public Blob(File fileObj) {
         fileName = fileObj.getName();
-        fileContents = readContentsAsString(fileObj);
+        fileContent = readContentsAsString(fileObj);
     }
 
     String getFileName() {
         return fileName;
+    }
+
+    String getFileContent() {
+        return fileContent;
     }
 
     String getUid() {
@@ -29,6 +33,6 @@ public class Blob implements Serializable {
 
     @Override
     public String toString() {
-        return String.format("%s:\n%s", fileName, fileContents);
+        return String.format("%s:\n%s", fileName, fileContent);
     }
 }

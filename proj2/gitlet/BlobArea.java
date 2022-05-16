@@ -16,4 +16,9 @@ public class BlobArea {
         File blobFile = join(BLOB_FOLDER, blob.getUid());
         writeObject(blobFile, blob);
     }
+
+    static Blob load(String blobUID) {
+        File blobFile = join(BLOB_FOLDER, blobUID);
+        return readObject(blobFile, Blob.class);
+    }
 }

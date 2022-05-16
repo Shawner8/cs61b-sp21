@@ -18,17 +18,29 @@ public class Branch implements Serializable {
         name = n;
     }
 
+    String getName() {
+        return name;
+    }
+
     /** Write the branch into the folder "branches/". */
     void save() {
         File branch = join(BRANCH_FOLDER, name);
         writeContents(branch, reference);
     }
 
+    /** Return the commit at the head of the branch. */
+    static Commit load(String branchName) {
+        File branchFile = join(BRANCH_FOLDER, branchName);
+        String commitUID = readContentsAsString(branchFile);
+        File commitFile = join(Commit.COMMIT_FOLDER, commitUID);
+        return readObject(commitFile, Commit.class);
+    }
+
     /** Write the branch into the file "BRANCH".
      *  set the branch to be the current branch.
      */
-    void set() {
-        writeContents(BRANCH, name);
+    static void set(String branchName) {
+        writeContents(BRANCH, branchName);
     }
 
     /** Return the name of the current branch. */
@@ -41,5 +53,9 @@ public class Branch implements Serializable {
         String name = readContentsAsString(BRANCH);
         File currentBranch = join(BRANCH_FOLDER, name);
         writeContents(currentBranch, ref);
+    }
+
+    static boolean contains(String branchName) {
+        return join(BRANCH_FOLDER, branchName).exists();
     }
 }
