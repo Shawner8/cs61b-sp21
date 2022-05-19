@@ -58,4 +58,9 @@ public class Branch implements Serializable {
     static boolean contains(String branchName) {
         return join(BRANCH_FOLDER, branchName).exists();
     }
+
+    static void remove(String branchName) {
+        File branchFile = join(BRANCH_FOLDER, branchName);
+        branchFile.delete();
+    }
 }

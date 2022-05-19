@@ -51,9 +51,32 @@ public class Repository {
             String uid = initCommit.getUid();
             initCommit.save();
             Head.set(uid);
-            Branch branch = new Branch(uid, "master");
-            branch.save();
-            Branch.set(branch.getName());
+            String branchName = "master";
+            saveBranch(branchName);
+            Branch.set(branchName);
+        }
+    }
+
+    /** Save a new branch named 'branchName' which points to the head commit. */
+    static void saveBranch(String branchName) {
+        if (Branch.contains(branchName)) {
+            message("A branch with that name already exists.");
+            System.exit(0);
+        } else {
+            Branch newBranch = new Branch(Head.get(), branchName);
+            newBranch.save();
+        }
+    }
+
+    static void removeBranch(String branchName) {
+        if (!Branch.contains(branchName)) {
+            message("A branch with that name does not exist.");
+            System.exit(0);
+        } else if (Branch.get().equals(branchName)) {
+            message("Cannot remove the current branch.");
+            System.exit(0);
+        } else {
+            Branch.remove(branchName);
         }
     }
 
@@ -223,6 +246,129 @@ public class Repository {
             }
             StagingArea.clear();
             Branch.set(branchName);
+            Head.set(commit.getUid());
+        }
+    }
+
+    static void reset(String commitUID) {
+        Commit commit = Commit.load(commitUID);
+        if (commit == null) {
+            message("No commit with that id exists.");
+            System.exit(0);
+        } else if (!untrackedFiles().isEmpty()) {
+            message("There is an untracked file in the way; delete it, or add and commit it first.");
+            System.exit(0);
+        } else {
+            clearCWD();
+            for (String fileName : commit.getFiles().keySet()) {
+                checkoutFileInCommit(commit.getUid(), fileName);
+            }
+            StagingArea.clear();
+            Branch.update(commitUID);
+            Head.set(commitUID);
+        }
+    }
+
+    static void createMergedFileAndStage(Commit currentBranch, Commit givenBranch, String fileName) {
+        message("Encountered a merge conflict.");
+        String fileContentsInCurrentBranch = currentBranch.getFileContent(fileName);
+        String fileContentsInGivenBranch = givenBranch.getFileContent(fileName);
+        String mergedFileContents = String.format("<<<<<<< HEAD\n%s=======\n%s>>>>>>>",
+                fileContentsInCurrentBranch, fileContentsInGivenBranch);
+        File mergedFile = join(CWD, fileName);
+        writeContents(mergedFile, mergedFileContents);
+        Blob blob = new Blob(fileName, mergedFileContents);
+        StagingArea.AdditionArea.add(blob);
+    }
+
+    static void merge(String branchName) {
+        if (!StagingArea.isEmpty()) {
+            message("You have uncommitted changes.");
+            System.exit(0);
+        } else if (!Branch.contains(branchName)) {
+            message("A branch with that name does not exist.");
+            System.exit(0);
+        } else if (Branch.get().equals(branchName)) {
+            message("Cannot merge a branch with itself.");
+            System.exit(0);
+        } else if (!untrackedFiles().isEmpty()) {
+            message("There is an untracked file in the way; delete it, or add and commit it first.");
+            System.exit(0);
+        } else {
+            Commit currentBranch = Head.load();
+            Commit givenBranch = Branch.load(branchName);
+            String splitPoint = Commit.findSplitPoint(currentBranch.getUid(), givenBranch.getUid());
+            Commit splitCommit = Commit.load(splitPoint);
+            if (givenBranch.getUid().equals(splitPoint)) {
+                message("Given branch is an ancestor of the current branch.");
+                System.exit(0);
+            } else if (currentBranch.getUid().equals(splitPoint)) {
+                checkoutBranch(branchName);
+                message("Current branch fast-forwarded.");
+                System.exit(0);
+            } else {
+                for (String fileName : splitCommit.getFiles().keySet()) {
+                    if (currentBranch.containsFile(fileName) &&
+                            givenBranch.containsFile(fileName)) {
+                        if (!givenBranch.getFileReference(fileName).equals(splitCommit.getFileReference(fileName)) &&
+                                currentBranch.getFileReference(fileName).equals(splitCommit.getFileReference(fileName))) {
+                            checkoutFileInCommit(givenBranch.getUid(), fileName);
+                            Blob blob = new Blob(fileName, givenBranch.getFileContent(fileName));
+                            StagingArea.AdditionArea.add(blob);
+                        } else if (!givenBranch.getFileReference(fileName).equals(splitCommit.getFileReference(fileName)) &&
+                                !currentBranch.getFileReference(fileName).equals(splitCommit.getFileReference(fileName)) &&
+                                !currentBranch.getFileReference(fileName).equals(givenBranch.getFileReference(fileName))) {
+                            // deal with merge conflict: file exists in the given branch and the current branch but has different contents
+                            createMergedFileAndStage(currentBranch, givenBranch, fileName);
+                        }
+                    } else if (!currentBranch.containsFile(fileName) &&
+                            givenBranch.containsFile(fileName)) {
+                        if (!givenBranch.getFileReference(fileName).equals(splitCommit.getFileReference(fileName))) {
+                            // deal with merge conflict: file only exists in the given branch and has different contents from the split point
+                            createMergedFileAndStage(currentBranch, givenBranch, fileName);
+                        }
+                    } else if (currentBranch.containsFile(fileName) &&
+                            !givenBranch.containsFile(fileName)) {
+                        if (currentBranch.getFileReference(fileName).equals(splitCommit.getFileReference(fileName))) {
+                            stagedForRemoval(fileName);
+                        } else if (!currentBranch.getFileReference(fileName).equals(splitCommit.getFileReference(fileName))) {
+                            // deal with merge conflict: file only exists in the current branch and has different contents from the split point
+                            createMergedFileAndStage(currentBranch, givenBranch, fileName);
+                        }
+                    }
+                }
+
+                for (String fileName : givenBranch.getFiles().keySet()) {
+                    if (!splitCommit.containsFile(fileName)) {
+                        if (!currentBranch.containsFile(fileName)) {
+                            checkoutFileInCommit(givenBranch.getUid(), fileName);
+                            Blob blob = new Blob(fileName, givenBranch.getFileContent(fileName));
+                            StagingArea.AdditionArea.add(blob);
+                        } else if (!currentBranch.getFileReference(fileName).equals(givenBranch.getFileReference(fileName))) {
+                            // deal with merge conflict: file exists in the given branch and the current branch but has different contents
+                            createMergedFileAndStage(currentBranch, givenBranch, fileName);
+                        }
+                    }
+                }
+
+                for (String fileName : currentBranch.getFiles().keySet()) {
+                    if (!splitCommit.containsFile(fileName)) {
+                        if (givenBranch.containsFile(fileName) &&
+                                !currentBranch.getFileReference(fileName).equals(givenBranch.getFileReference(fileName))) {
+                            // deal with merge conflict: file exists in the given branch and the current branch but has different contents
+                            createMergedFileAndStage(currentBranch, givenBranch, fileName);
+                        }
+                    }
+                }
+
+                String commitMessage = String.format("Merged %s into %s.", branchName, Branch.get());
+                Commit commit = new Commit(currentBranch, givenBranch, commitMessage);
+                commit.save();
+                StagingArea.AdditionArea.moveToBlobs();
+                StagingArea.clear();
+                Head.set(commit.getUid());
+                Branch.update(commit.getUid());
+            }
         }
     }
 }

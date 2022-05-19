@@ -76,6 +76,26 @@ public class Main {
                         break;
                 }
                 break;
+            case "branch":
+                validateGitletDirectoryExists();
+                validateNumArgs(args, 2, 2);
+                Repository.saveBranch(args[1]);
+                break;
+            case "rm-branch":
+                validateGitletDirectoryExists();
+                validateNumArgs(args, 2, 2);
+                Repository.removeBranch(args[1]);
+                break;
+            case "reset":
+                validateGitletDirectoryExists();
+                validateNumArgs(args, 2, 2);
+                Repository.reset(args[1]);
+                break;
+            case "merge":
+                validateGitletDirectoryExists();
+                validateNumArgs(args, 2, 2);
+                Repository.merge(args[1]);
+                break;
             default:
                 message("No command with that name exists.");
                 System.exit(0);
