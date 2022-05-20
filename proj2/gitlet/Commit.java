@@ -1,34 +1,38 @@
 package gitlet;
 
-// TODO: any imports you need here
-
 import java.io.File;
 import java.io.Serializable;
-import java.util.*;
+import java.util.Date;
+import java.util.Locale;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.ArrayDeque;
 
 import static gitlet.Utils.*;
 
 /** Represents a gitlet commit object.
  *  Commit class is a composition idea of both region(folder) "commits/" and commit object itself.
+ *  COMMIT_FOLDER archive:
+ *  --commits/
+ *       |--3b7b0e38bd1382fddcadddf37a78e45ae6669462
+ *       |--3c4a7f4d8227d924cfbd81d083dcd408921fd7fc
+ *
+ *  This class can be optimized to support abbr. commitUID search by reorganize the
+ *  object storage archive like the example showed below:
+ *  --commits/
+ *       |--3b/
+ *           |--7b0e38bd1382fddcadddf37a78e45ae6669462
+ *       |--3c/
+ *           |--4a7f4d8227d924cfbd81d083dcd408921fd7fc
  *
  *  @author Shawn
  */
 public class Commit implements Serializable {
-    /**
-     * TODO: add instance variables here.
-     *
-     * List all instance variables of the Commit class here with a useful
-     * comment above them describing what that variable represents and how that
-     * variable is used. We've provided one example for `message`.
-     */
 
     /** Folder that commits live in. */
     static final File COMMIT_FOLDER = join(Repository.GITLET_DIR, "commits");
 
-    /** The message of this Commit. */
     private String message;
-
-    /* TODO: fill in the rest of this class. */
     private Date timestamp;
     private String firstParent;
     private String secondParent;
@@ -49,6 +53,7 @@ public class Commit implements Serializable {
         message = commitMessage;
         timestamp = new Date();
         firstParent = o.getUid();
+        secondParent = null;
         files = o.files;
 
         TreeMap<String, String> additionMap = StagingArea.AdditionArea.getMap();
@@ -89,6 +94,9 @@ public class Commit implements Serializable {
         return timestamp;
     }
 
+    /** Return the first parent commit of this commit.
+     *  If this commit has no parent, returns null.
+     */
     Commit getParentCommit() {
         if (firstParent == null) {
             return null;
@@ -102,14 +110,17 @@ public class Commit implements Serializable {
         return files;
     }
 
+    /** Return whether the commit contains the file with name "fileName". */
     boolean containsFile(String fileName) {
         return files.containsKey(fileName);
     }
 
+    /** Return the UID of the file saved in the commit. */
     String getFileReference(String fileName) {
         return files.get(fileName);
     }
 
+    /** Return the content of the file saved in the commit. */
     String getFileContent(String fileName) {
         if (containsFile(fileName)) {
             String fileRef = getFileReference(fileName);
@@ -120,7 +131,9 @@ public class Commit implements Serializable {
         }
     }
 
-    /** Return SHA1 of the commit. */
+    /** Return SHA1 of the commit.
+     *  Lazy cache.
+     */
     String getUid() {
         if (uid == null) {
             uid = sha1(toString());
@@ -156,6 +169,7 @@ public class Commit implements Serializable {
         return s;
     }
 
+    /** Return the log information of the commit. */
     String logInfo() {
         String t = String.format(Locale.US, "%1$ta %1$tb %1$te %1$tT %1$tY %1$tz", timestamp);
         if (secondParent == null) {
@@ -166,22 +180,38 @@ public class Commit implements Serializable {
         }
     }
 
+    /** Find all the ancestors of the given commit and saved in the HashSet. */
+    static void findAncestors(String commitUID, TreeSet<String> ancestors) {
+        if (commitUID != null) {
+            Commit commit = load(commitUID);
+            ancestors.add(commitUID);
+            findAncestors(commit.firstParent, ancestors);
+            findAncestors(commit.secondParent, ancestors);
+        }
+    }
+
     /** Return the uid of the split point of commit 1 and commit 2.
      *  Return null if the split point doesn't exist.
+     *  Use BFS to determine the closest common ancestor.
      */
     static String findSplitPoint(String uid1, String uid2) {
-        HashSet<String> ancestorsOfCommit1 = new HashSet<>();
-        Commit commit1 = load(uid1);
-        while (commit1 != null) {
-            ancestorsOfCommit1.add(commit1.getUid());
-            commit1 = commit1.getParentCommit();
-        }
-        Commit commit2 = load(uid2);
-        while (commit2 != null) {
-            if (ancestorsOfCommit1.contains(commit2.getUid())) {
-                return commit2.getUid();
+        TreeSet<String> ancestorsOfCommit1 = new TreeSet<>();
+        findAncestors(uid1, ancestorsOfCommit1);
+        ArrayDeque<String> ancestorsOfCommit2 = new ArrayDeque<>();
+        ancestorsOfCommit2.addLast(uid2);
+        while (!ancestorsOfCommit2.isEmpty()) {
+            String ancestor = ancestorsOfCommit2.removeFirst();
+            if (ancestorsOfCommit1.contains(ancestor)) {
+                return ancestor;
+            } else {
+                Commit commit = Commit.load(ancestor);
+                if (commit.firstParent != null) {
+                    ancestorsOfCommit2.addLast(commit.firstParent);
+                }
+                if (commit.secondParent != null) {
+                    ancestorsOfCommit2.addLast(commit.secondParent);
+                }
             }
-            commit2 = commit2.getParentCommit();
         }
         return null;
     }

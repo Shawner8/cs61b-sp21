@@ -22,20 +22,12 @@ import static gitlet.Utils.*;
  *  @author Shawn
  */
 public class Repository {
-    /**
-     * TODO: add instance variables here.
-     *
-     * List all instance variables of the Repository class here with a useful
-     * comment above them describing what that variable represents and how that
-     * variable is used. We've provided two examples for you.
-     */
 
     /** The current working directory. */
     public static final File CWD = new File(System.getProperty("user.dir"));
     /** The .gitlet directory. */
     public static final File GITLET_DIR = join(CWD, ".gitlet");
 
-    /* TODO: fill in the rest of this class. */
     static void setupPersistence() {
         if (GITLET_DIR.exists()) {
             message("A Gitlet version-control system already exists in the current directory.");
@@ -88,8 +80,11 @@ public class Repository {
         } else {
             Blob blob = new Blob(file);
             Commit commit = Head.load();
-            if (commit.containsFile(blob.getFileName()) &&
-                    commit.getFileReference(blob.getFileName()).equals(blob.getUid())) {
+            if (StagingArea.RemovalArea.contains(file.getName())) {
+                StagingArea.RemovalArea.remove(file.getName());
+            }
+            if (commit.containsFile(blob.getFileName())
+                    && commit.getFileReference(blob.getFileName()).equals(blob.getUid())) {
                 StagingArea.AdditionArea.remove(blob.getFileName());
             } else {
                 StagingArea.AdditionArea.add(blob);
@@ -214,7 +209,8 @@ public class Repository {
         Commit commit = Head.load();
         LinkedList<String> untrackedFiles = new LinkedList<>();
         for (String fileName : plainFilenamesIn(CWD)) {
-            if (!commit.containsFile(fileName)) {
+            if (!commit.containsFile(fileName)
+                    && !StagingArea.AdditionArea.contains(fileName)) {
                 untrackedFiles.add(fileName);
             }
         }
@@ -236,7 +232,8 @@ public class Repository {
             message("No need to checkout the current branch.");
             System.exit(0);
         } else if (!untrackedFiles().isEmpty()) {
-            message("There is an untracked file in the way; delete it, or add and commit it first.");
+            message("There is an untracked file in the way; "
+                    + "delete it, or add and commit it first.");
             System.exit(0);
         } else {
             Commit commit = Branch.load(branchName);
@@ -256,7 +253,8 @@ public class Repository {
             message("No commit with that id exists.");
             System.exit(0);
         } else if (!untrackedFiles().isEmpty()) {
-            message("There is an untracked file in the way; delete it, or add and commit it first.");
+            message("There is an untracked file in the way; "
+                    + "delete it, or add and commit it first.");
             System.exit(0);
         } else {
             clearCWD();
@@ -269,11 +267,11 @@ public class Repository {
         }
     }
 
-    static void createMergedFileAndStage(Commit currentBranch, Commit givenBranch, String fileName) {
+    static void mergeFile(Commit currentBranch, Commit givenBranch, String fileName) {
         message("Encountered a merge conflict.");
         String fileContentsInCurrentBranch = currentBranch.getFileContent(fileName);
         String fileContentsInGivenBranch = givenBranch.getFileContent(fileName);
-        String mergedFileContents = String.format("<<<<<<< HEAD\n%s=======\n%s>>>>>>>",
+        String mergedFileContents = String.format("<<<<<<< HEAD\n%s=======\n%s>>>>>>>\n",
                 fileContentsInCurrentBranch, fileContentsInGivenBranch);
         File mergedFile = join(CWD, fileName);
         writeContents(mergedFile, mergedFileContents);
@@ -292,7 +290,8 @@ public class Repository {
             message("Cannot merge a branch with itself.");
             System.exit(0);
         } else if (!untrackedFiles().isEmpty()) {
-            message("There is an untracked file in the way; delete it, or add and commit it first.");
+            message("There is an untracked file in the way; "
+                    + "delete it, or add and commit it first.");
             System.exit(0);
         } else {
             Commit currentBranch = Head.load();
@@ -308,32 +307,32 @@ public class Repository {
                 System.exit(0);
             } else {
                 for (String fileName : splitCommit.getFiles().keySet()) {
-                    if (currentBranch.containsFile(fileName) &&
-                            givenBranch.containsFile(fileName)) {
-                        if (!givenBranch.getFileReference(fileName).equals(splitCommit.getFileReference(fileName)) &&
-                                currentBranch.getFileReference(fileName).equals(splitCommit.getFileReference(fileName))) {
+                    if (currentBranch.containsFile(fileName)
+                            && givenBranch.containsFile(fileName)) {
+                        if (!givenBranch.getFileReference(fileName).equals(splitCommit.getFileReference(fileName))
+                                && currentBranch.getFileReference(fileName).equals(splitCommit.getFileReference(fileName))) {
                             checkoutFileInCommit(givenBranch.getUid(), fileName);
                             Blob blob = new Blob(fileName, givenBranch.getFileContent(fileName));
                             StagingArea.AdditionArea.add(blob);
-                        } else if (!givenBranch.getFileReference(fileName).equals(splitCommit.getFileReference(fileName)) &&
-                                !currentBranch.getFileReference(fileName).equals(splitCommit.getFileReference(fileName)) &&
-                                !currentBranch.getFileReference(fileName).equals(givenBranch.getFileReference(fileName))) {
+                        } else if (!givenBranch.getFileReference(fileName).equals(splitCommit.getFileReference(fileName))
+                                && !currentBranch.getFileReference(fileName).equals(splitCommit.getFileReference(fileName))
+                                && !currentBranch.getFileReference(fileName).equals(givenBranch.getFileReference(fileName))) {
                             // deal with merge conflict: file exists in the given branch and the current branch but has different contents
-                            createMergedFileAndStage(currentBranch, givenBranch, fileName);
+                            mergeFile(currentBranch, givenBranch, fileName);
                         }
-                    } else if (!currentBranch.containsFile(fileName) &&
-                            givenBranch.containsFile(fileName)) {
+                    } else if (!currentBranch.containsFile(fileName)
+                            && givenBranch.containsFile(fileName)) {
                         if (!givenBranch.getFileReference(fileName).equals(splitCommit.getFileReference(fileName))) {
                             // deal with merge conflict: file only exists in the given branch and has different contents from the split point
-                            createMergedFileAndStage(currentBranch, givenBranch, fileName);
+                            mergeFile(currentBranch, givenBranch, fileName);
                         }
-                    } else if (currentBranch.containsFile(fileName) &&
-                            !givenBranch.containsFile(fileName)) {
+                    } else if (currentBranch.containsFile(fileName)
+                            && !givenBranch.containsFile(fileName)) {
                         if (currentBranch.getFileReference(fileName).equals(splitCommit.getFileReference(fileName))) {
                             stagedForRemoval(fileName);
                         } else if (!currentBranch.getFileReference(fileName).equals(splitCommit.getFileReference(fileName))) {
                             // deal with merge conflict: file only exists in the current branch and has different contents from the split point
-                            createMergedFileAndStage(currentBranch, givenBranch, fileName);
+                            mergeFile(currentBranch, givenBranch, fileName);
                         }
                     }
                 }
@@ -346,17 +345,17 @@ public class Repository {
                             StagingArea.AdditionArea.add(blob);
                         } else if (!currentBranch.getFileReference(fileName).equals(givenBranch.getFileReference(fileName))) {
                             // deal with merge conflict: file exists in the given branch and the current branch but has different contents
-                            createMergedFileAndStage(currentBranch, givenBranch, fileName);
+                            mergeFile(currentBranch, givenBranch, fileName);
                         }
                     }
                 }
 
                 for (String fileName : currentBranch.getFiles().keySet()) {
                     if (!splitCommit.containsFile(fileName)) {
-                        if (givenBranch.containsFile(fileName) &&
-                                !currentBranch.getFileReference(fileName).equals(givenBranch.getFileReference(fileName))) {
+                        if (givenBranch.containsFile(fileName)
+                                && !currentBranch.getFileReference(fileName).equals(givenBranch.getFileReference(fileName))) {
                             // deal with merge conflict: file exists in the given branch and the current branch but has different contents
-                            createMergedFileAndStage(currentBranch, givenBranch, fileName);
+                            mergeFile(currentBranch, givenBranch, fileName);
                         }
                     }
                 }

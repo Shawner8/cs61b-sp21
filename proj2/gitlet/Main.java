@@ -11,94 +11,97 @@ public class Main {
      *  <COMMAND> <OPERAND1> <OPERAND2> ... 
      */
     public static void main(String[] args) {
-        // TODO: what if args is empty?
         if (args.length == 0) {
             message("Please enter a command.");
             System.exit(0);
         }
 
         String firstArg = args[0];
-        switch(firstArg) {
-            case "init":
-                // TODO: handle the `init` command
+        switch (firstArg) {
+            case "init" -> {
                 validateNumArgs(args, 1, 1);
                 Repository.setupPersistence();
-                break;
-            case "add":
-                // TODO: handle the `add [filename]` command
+            }
+            case "add" -> {
                 validateGitletDirectoryExists();
                 validateNumArgs(args, 2, 2);
                 Repository.stagedForAddition(args[1]);
-                break;
-            // TODO: FILL THE REST IN
-            case "rm":
+            }
+            case "rm" -> {
                 validateGitletDirectoryExists();
                 validateNumArgs(args, 2, 2);
                 Repository.stagedForRemoval(args[1]);
-                break;
-            case "commit":
+            }
+            case "commit" -> {
                 validateGitletDirectoryExists();
                 validateNumArgs(args, 2, 2);
                 Repository.commit(args[1]);
-                break;
-            case "log":
+            }
+            case "log" -> {
                 validateGitletDirectoryExists();
                 validateNumArgs(args, 1, 1);
                 Repository.log();
-                break;
-            case "global-log":
+            }
+            case "global-log" -> {
                 validateGitletDirectoryExists();
                 validateNumArgs(args, 1, 1);
                 Repository.globalLog();
-                break;
-            case "find":
+            }
+            case "find" -> {
                 validateGitletDirectoryExists();
                 validateNumArgs(args, 2, 2);
                 Repository.find(args[1]);
-                break;
-            case "status":
+            }
+            case "status" -> {
                 validateGitletDirectoryExists();
                 validateNumArgs(args, 1, 1);
                 Repository.status();
-                break;
-            case "checkout":
+            }
+            case "checkout" -> {
                 validateGitletDirectoryExists();
                 validateNumArgs(args, 2, 4);
                 switch (args.length) {
-                    case 2:
-                        Repository.checkoutBranch(args[1]);
-                        break;
-                    case 3:
+                    case 2 -> Repository.checkoutBranch(args[1]);
+                    case 3 -> {
+                        if (!args[1].equals("--")) {
+                            message("Incorrect operands.");
+                            System.exit(0);
+                        }
                         Repository.checkoutFileInCommit(Head.get(), args[2]);
-                        break;
-                    case 4:
+                    }
+                    case 4 -> {
+                        if (!args[2].equals("--")) {
+                            message("Incorrect operands.");
+                            System.exit(0);
+                        }
                         Repository.checkoutFileInCommit(args[1], args[3]);
-                        break;
+                    }
                 }
-                break;
-            case "branch":
+            }
+            case "branch" -> {
                 validateGitletDirectoryExists();
                 validateNumArgs(args, 2, 2);
                 Repository.saveBranch(args[1]);
-                break;
-            case "rm-branch":
+            }
+            case "rm-branch" -> {
                 validateGitletDirectoryExists();
                 validateNumArgs(args, 2, 2);
                 Repository.removeBranch(args[1]);
-                break;
-            case "reset":
+            }
+            case "reset" -> {
                 validateGitletDirectoryExists();
                 validateNumArgs(args, 2, 2);
                 Repository.reset(args[1]);
-                break;
-            case "merge":
+            }
+            case "merge" -> {
                 validateGitletDirectoryExists();
                 validateNumArgs(args, 2, 2);
                 Repository.merge(args[1]);
-                break;
-            default:
+            }
+            default -> {
                 message("No command with that name exists.");
                 System.exit(0);
+            }
         }
     }
 

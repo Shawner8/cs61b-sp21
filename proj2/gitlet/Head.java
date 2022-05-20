@@ -5,6 +5,10 @@ import java.io.Serializable;
 
 import static gitlet.Utils.*;
 
+/** Represents a gitlet HEAD object.
+ *
+ *  @author Shawn
+ */
 public class Head implements Serializable {
 
     static final File HEAD = join(Repository.GITLET_DIR, "HEAD");

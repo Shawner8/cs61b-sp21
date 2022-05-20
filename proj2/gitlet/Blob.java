@@ -5,6 +5,12 @@ import java.io.Serializable;
 
 import static gitlet.Utils.*;
 
+/** Represents a gitlet file object.
+ *  contains 3 fields:
+ *    fileName, fileContent and UID.
+ *
+ *  @author Shawn
+ */
 public class Blob implements Serializable {
 
     private String fileName;
@@ -29,6 +35,7 @@ public class Blob implements Serializable {
         return fileContent;
     }
 
+    /* Lazy cache. */
     String getUid() {
         if (uid == null) {
             uid = sha1(toString());

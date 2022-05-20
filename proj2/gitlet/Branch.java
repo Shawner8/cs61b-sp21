@@ -5,6 +5,10 @@ import java.io.Serializable;
 
 import static gitlet.Utils.*;
 
+/** Represents a gitlet branch object.
+ *
+ *  @author Shawn
+ */
 public class Branch implements Serializable {
 
     static final File BRANCH_FOLDER = join(Repository.GITLET_DIR, "branches");
@@ -55,10 +59,12 @@ public class Branch implements Serializable {
         writeContents(currentBranch, ref);
     }
 
+    /** Return whether the current repository contains the branch with name "branchName". */
     static boolean contains(String branchName) {
         return join(BRANCH_FOLDER, branchName).exists();
     }
 
+    /** Remove the branch reference from the current repository. */
     static void remove(String branchName) {
         File branchFile = join(BRANCH_FOLDER, branchName);
         branchFile.delete();
